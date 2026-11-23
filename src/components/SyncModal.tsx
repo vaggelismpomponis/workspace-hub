@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Cloud, Copy, KeyRound, RefreshCw, Smartphone, X } from "lucide-react";
+import { Check, Cloud, Copy, Database, KeyRound, RefreshCw, Smartphone, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -29,6 +29,7 @@ export function SyncModal({
   const [currentKey, setCurrentKey] = useState("");
   const [inputKey, setInputKey] = useState("");
   const [copied, setCopied] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [customUrl, setCustomUrl] = useState("");
   const [customKey, setCustomAnonKey] = useState("");
@@ -92,6 +93,36 @@ export function SyncModal({
     navigator.clipboard.writeText(currentKey);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const SQL_SCHEMA = `-- 1. Create workspaces table
+create table if not exists public.workspaces (
+  id text primary key,
+  projects jsonb not null default '[]'::jsonb,
+  saas_apps jsonb not null default '[]'::jsonb,
+  pinned_ids jsonb not null default '[]'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+-- 2. Enable Row Level Security & Policies
+alter table public.workspaces enable row level security;
+
+create policy "Allow select workspace by sync key"
+  on public.workspaces for select using (true);
+
+create policy "Allow insert workspace by sync key"
+  on public.workspaces for insert with check (true);
+
+create policy "Allow update workspace by sync key"
+  on public.workspaces for update using (true) with check (true);
+
+-- 3. Enable Realtime
+alter publication supabase_realtime add table public.workspaces;`;
+
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(SQL_SCHEMA);
+    setCopiedSql(true);
+    setTimeout(() => setCopiedSql(false), 1500);
   };
 
   const handleSaveCustomCreds = () => {
@@ -221,6 +252,40 @@ export function SyncModal({
               Last synced: {lastSyncedAt.toLocaleTimeString()}
             </p>
           )}
+
+          {/* Supabase SQL Setup Instruction */}
+          <div className="p-3 rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 text-[11px]">
+                <Database className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                <span>Supabase SQL Setup (Run Once)</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleCopySql}
+                className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline"
+              >
+                {copiedSql ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                <span>{copiedSql ? "Copied SQL" : "Copy SQL Script"}</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-zinc-500">
+              Run this in your{" "}
+              <a
+                href={
+                  customUrl
+                    ? `${customUrl.replace(".supabase.co", "")}/sql/new`
+                    : "https://supabase.com/dashboard"
+                }
+                target="_blank"
+                rel="noreferrer"
+                className="text-zinc-700 dark:text-zinc-300 underline font-medium"
+              >
+                Supabase SQL Editor
+              </a>{" "}
+              to create the <code>public.workspaces</code> table and enable realtime sync.
+            </p>
+          </div>
 
           {/* Supabase Custom Credentials Toggle */}
           <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">

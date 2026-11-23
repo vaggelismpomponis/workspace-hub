@@ -95,7 +95,13 @@ export async function fetchRemoteWorkspace(syncKey: string): Promise<RemoteWorks
       .maybeSingle();
 
     if (error) {
-      console.error("Supabase fetch error:", error.message);
+      if (error.message.includes("Could not find the table") || error.code === "PGRST204") {
+        console.warn(
+          "Supabase: 'public.workspaces' table does not exist yet. Run the SQL in supabase/schema.sql in your Supabase SQL Editor to enable cross-device sync.",
+        );
+      } else {
+        console.error("Supabase fetch error:", error.message);
+      }
       return null;
     }
 
@@ -134,7 +140,13 @@ export async function pushRemoteWorkspace(
     );
 
     if (error) {
-      console.error("Supabase upsert error:", error.message);
+      if (error.message.includes("Could not find the table") || error.code === "PGRST204") {
+        console.warn(
+          "Supabase: 'public.workspaces' table does not exist yet. Run the SQL in supabase/schema.sql in your Supabase SQL Editor to enable cross-device sync.",
+        );
+      } else {
+        console.error("Supabase upsert error:", error.message);
+      }
       return false;
     }
 
