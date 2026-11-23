@@ -5,6 +5,13 @@ export const metadata: Metadata = {
   title: "Workspace Hub | Central Developer Command Center",
   description:
     "Unified developer portal and launchpad for local workspace projects and daily SaaS apps.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

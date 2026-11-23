@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import type { AppCategory, PortStatusMap } from "../types";
+import { Logo } from "./Logo";
 
 interface SidebarProps {
   activeCategory: AppCategory;
@@ -61,19 +62,7 @@ export function Sidebar({
     <div className="flex flex-col h-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 select-none">
       {/* Brand Header */}
       <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-mono font-bold text-xs flex items-center justify-center shrink-0">
-            VB
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-sm font-bold tracking-tight truncate leading-tight">
-              Workspace Hub
-            </h2>
-            <p className="text-[10px] font-mono tracking-widest uppercase text-zinc-500 truncate">
-              Command Center
-            </p>
-          </div>
-        </div>
+        <Logo size="md" showText={true} />
         {mobileOpen && (
           <button
             type="button"

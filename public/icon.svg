@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background with subtle structural border -->
+  <rect width="64" height="64" rx="14" fill="#09090b" stroke="#27272a" stroke-width="1.5"/>
+  
+  <!-- Architectural Datum Line -->
+  <path d="M15 34H49" stroke="#27272a" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2 3"/>
+
+  <!-- Geometric Monogram W -->
+  <path d="M16 22L24 43L32 26L40 43L48 22" 
+        stroke="#f4f4f5" 
+        stroke-width="4.5" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+        
+  <!-- Precision Connecting Hub Crossbeam -->
+  <path d="M20 34H44" 
+        stroke="#71717a" 
+        stroke-width="2" 
+        stroke-linecap="round" 
+        stroke-dasharray="2 2"/>
+
+  <!-- Active Developer Pulse / Live Port Node -->
+  <circle cx="32" cy="26" r="4.5" fill="#10b981"/>
+  <circle cx="32" cy="26" r="2" fill="#ffffff"/>
+</svg>
