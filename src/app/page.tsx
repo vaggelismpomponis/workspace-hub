@@ -8,7 +8,14 @@ import { SaaSSection } from "@/components/SaaSSection";
 import { Sidebar } from "@/components/Sidebar";
 import { type FilterScope, TopBar, type ViewMode } from "@/components/TopBar";
 import { initialProjects, initialSaaSApps } from "@/data/initialCatalog";
-import { loadCatalog, resetCatalogToDefault, saveCatalog } from "@/lib/storage";
+import {
+  loadCatalog,
+  loadPinnedIds,
+  resetCatalogToDefault,
+  savePinnedIds,
+  saveProjects,
+  saveSaaSApps,
+} from "@/lib/storage";
 import type { AppCategory, HubItem, PortStatusMap, ProjectItem, SaaSAppItem } from "@/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -87,22 +94,32 @@ export default function WorkspaceHubPage() {
 
   const handleTogglePin = (id: string) => {
     setProjects((prev) => {
+      const exists = prev.some((p) => p.id === id);
+      if (!exists) return prev;
       const next = prev.map((p) => (p.id === id ? { ...p, isPinned: !p.isPinned } : p));
-      saveCatalog(next, saasApps);
+      saveProjects(next);
       return next;
     });
 
     setSaasApps((prev) => {
+      const exists = prev.some((s) => s.id === id);
+      if (!exists) return prev;
       const next = prev.map((s) => (s.id === id ? { ...s, isPinned: !s.isPinned } : s));
-      saveCatalog(projects, next);
+      saveSaaSApps(next);
       return next;
     });
+
+    const currentPinned = loadPinnedIds() || [];
+    const nextPinned = currentPinned.includes(id)
+      ? currentPinned.filter((item) => item !== id)
+      : [...currentPinned, id];
+    savePinnedIds(nextPinned);
   };
 
   const handleAddProject = (newProj: ProjectItem) => {
     setProjects((prev) => {
       const next = [newProj, ...prev];
-      saveCatalog(next, saasApps);
+      saveProjects(next);
       return next;
     });
   };
@@ -110,7 +127,7 @@ export default function WorkspaceHubPage() {
   const handleAddSaaS = (newApp: SaaSAppItem) => {
     setSaasApps((prev) => {
       const next = [newApp, ...prev];
-      saveCatalog(projects, next);
+      saveSaaSApps(next);
       return next;
     });
   };
