@@ -1,6 +1,8 @@
 import net from "node:net";
 import { type NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 function checkPort(port: number, timeout = 400): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = new net.Socket();

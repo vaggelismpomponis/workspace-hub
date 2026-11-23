@@ -1,12 +1,14 @@
 "use client";
 
 import { AddAppModal } from "@/components/AddAppModal";
-import { CategoryFilter } from "@/components/CategoryFilter";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Header } from "@/components/Header";
 import { ProjectCard } from "@/components/ProjectCard";
+import { ProjectRow } from "@/components/ProjectRow";
 import { QuickLauncher } from "@/components/QuickLauncher";
 import { SaaSAppCard } from "@/components/SaaSAppCard";
+import { SaaSAppRow } from "@/components/SaaSAppRow";
+import { Sidebar } from "@/components/Sidebar";
+import { type FilterScope, TopBar, type ViewMode } from "@/components/TopBar";
 import { initialProjects, initialSaaSApps } from "@/data/initialCatalog";
 import { loadCatalog, resetCatalogToDefault, saveCatalog } from "@/lib/storage";
 import type { AppCategory, HubItem, PortStatusMap, ProjectItem, SaaSAppItem } from "@/types";
@@ -18,6 +20,10 @@ export default function WorkspaceHubPage() {
   const [portStatuses, setPortStatuses] = useState<PortStatusMap>({});
   const [isPinging, setIsPinging] = useState(false);
   const [activeCategory, setActiveCategory] = useState<AppCategory>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterScope, setFilterScope] = useState<FilterScope>("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -25,12 +31,8 @@ export default function WorkspaceHubPage() {
   useEffect(() => {
     try {
       const data = loadCatalog();
-      if (data?.projects?.length > 0) {
-        setProjects(data.projects);
-      }
-      if (data?.saasApps?.length > 0) {
-        setSaasApps(data.saasApps);
-      }
+      if (data?.projects?.length > 0) setProjects(data.projects);
+      if (data?.saasApps?.length > 0) setSaasApps(data.saasApps);
     } catch (err) {
       console.error("Storage load error", err);
     }
@@ -53,9 +55,7 @@ export default function WorkspaceHubPage() {
       const res = await fetch(`/api/ping?ports=${ports.join(",")}`);
       if (res.ok) {
         const json = await res.json();
-        if (json.statuses) {
-          setPortStatuses(json.statuses);
-        }
+        if (json.statuses) setPortStatuses(json.statuses);
       }
     } catch (err) {
       console.error("Port ping error", err);
@@ -65,9 +65,7 @@ export default function WorkspaceHubPage() {
   }, []);
 
   useEffect(() => {
-    if (projects.length > 0) {
-      pingPorts(projects);
-    }
+    if (projects.length > 0) pingPorts(projects);
   }, [projects, pingPorts]);
 
   // Global Ctrl+K / Cmd+K listener
@@ -129,8 +127,66 @@ export default function WorkspaceHubPage() {
     }
   };
 
+  // Filtered lists based on category, search, and scope
+  const filteredProjects = useMemo(() => {
+    if (activeCategory !== "all" && activeCategory !== "projects") return [];
+
+    return projects.filter((p) => {
+      // Search query
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase().trim();
+        const matches =
+          p.name.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          p.liveDomain?.toLowerCase().includes(q) ||
+          p.tags.some((t) => t.toLowerCase().includes(q)) ||
+          p.localPort?.toString().includes(q);
+        if (!matches) return false;
+      }
+
+      // Filter scope
+      if (filterScope === "active-ports") {
+        return p.localPort ? !!portStatuses[p.localPort] : false;
+      }
+      if (filterScope === "live-domains") {
+        return !!p.liveDomain;
+      }
+      if (filterScope === "pinned") {
+        return !!p.isPinned;
+      }
+
+      return true;
+    });
+  }, [projects, activeCategory, searchQuery, filterScope, portStatuses]);
+
+  const filteredSaaS = useMemo(() => {
+    if (activeCategory === "projects") return [];
+
+    return saasApps.filter((s) => {
+      if (activeCategory !== "all" && s.category !== activeCategory) return false;
+
+      // Search query
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase().trim();
+        const matches =
+          s.name.toLowerCase().includes(q) ||
+          s.description.toLowerCase().includes(q) ||
+          s.domain?.toLowerCase().includes(q) ||
+          s.tags.some((t) => t.toLowerCase().includes(q));
+        if (!matches) return false;
+      }
+
+      // Filter scope
+      if (filterScope === "active-ports") return false;
+      if (filterScope === "live-domains") return !!s.domain;
+      if (filterScope === "pinned") return !!s.isPinned;
+
+      return true;
+    });
+  }, [saasApps, activeCategory, searchQuery, filterScope]);
+
   const counts: Record<AppCategory, number> = useMemo(() => {
-    const map: Record<AppCategory, number> = {
+    return {
       all: allItems.length,
       projects: projects.length,
       "dev-cloud": saasApps.filter((s) => s.category === "dev-cloud").length,
@@ -140,91 +196,173 @@ export default function WorkspaceHubPage() {
       communication: saasApps.filter((s) => s.category === "communication").length,
       finance: saasApps.filter((s) => s.category === "finance").length,
     };
-    return map;
   }, [allItems, projects, saasApps]);
 
   const activePortCount = Object.values(portStatuses).filter(Boolean).length;
-
-  const showProjects = activeCategory === "all" || activeCategory === "projects";
-  const filteredSaaS =
-    activeCategory === "all" ? saasApps : saasApps.filter((s) => s.category === activeCategory);
+  const liveDomainCount =
+    projects.filter((p) => p.liveDomain).length + saasApps.filter((s) => s.domain).length;
 
   return (
-    <div className="min-h-dvh flex flex-col bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
-      <Header
-        onOpenCommand={() => setIsCommandOpen(true)}
-        onOpenAddModal={() => setIsAddModalOpen(true)}
+    <div className="min-h-dvh flex bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+      {/* Sidebar Navigation */}
+      <Sidebar
+        activeCategory={activeCategory}
+        onSelectCategory={setActiveCategory}
+        counts={counts}
+        portStatuses={portStatuses}
         onRefreshPorts={() => pingPorts(projects)}
         isPinging={isPinging}
-        activePortCount={activePortCount}
+        onOpenCommand={() => setIsCommandOpen(true)}
+        mobileOpen={mobileSidebarOpen}
+        onCloseMobile={() => setMobileSidebarOpen(false)}
       />
 
-      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 flex flex-col">
-        <QuickLauncher pinnedItems={pinnedItems} onOpenAll={handleOpenPinned} />
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <TopBar
+          activeCategory={activeCategory}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          filterScope={filterScope}
+          onFilterScopeChange={setFilterScope}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          onOpenAddModal={() => setIsAddModalOpen(true)}
+          onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
+          activePortCount={activePortCount}
+          liveDomainCount={liveDomainCount}
+          pinnedCount={pinnedItems.length}
+        />
 
-        <div className="mb-6">
-          <CategoryFilter
-            activeCategory={activeCategory}
-            onSelect={setActiveCategory}
-            counts={counts}
-          />
-        </div>
+        <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 flex flex-col">
+          {/* Daily Suite */}
+          {filterScope === "all" && !searchQuery && (
+            <QuickLauncher pinnedItems={pinnedItems} onOpenAll={handleOpenPinned} />
+          )}
 
-        {/* Projects Section */}
-        {showProjects && (
-          <section className="mb-8">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xs font-bold tracking-widest uppercase text-zinc-500">
-                Workspace Projects ({projects.length})
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {projects.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  isPortActive={project.localPort ? !!portStatuses[project.localPort] : false}
-                  onTogglePin={handleTogglePin}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+          {/* Projects Section */}
+          {filteredProjects.length > 0 && (
+            <section className="mb-8">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xs font-bold tracking-widest uppercase text-zinc-500">
+                  Projects ({filteredProjects.length})
+                </h2>
+              </div>
 
-        {/* SaaS & Daily Web Apps Section */}
-        {filteredSaaS.length > 0 && (
-          <section className="mb-8">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xs font-bold tracking-widest uppercase text-zinc-500">
-                Daily Web & Cloud Services ({filteredSaaS.length})
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {filteredSaaS.map((app) => (
-                <SaaSAppCard key={app.id} app={app} onTogglePin={handleTogglePin} />
-              ))}
-            </div>
-          </section>
-        )}
+              {viewMode === "grid" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                  {filteredProjects.map((project) => (
+                    <ProjectCard
+                      key={project.id}
+                      project={project}
+                      isPortActive={project.localPort ? !!portStatuses[project.localPort] : false}
+                      onTogglePin={handleTogglePin}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-900 shadow-xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-zinc-200 dark:border-zinc-800 text-[10px] font-mono uppercase tracking-wider text-zinc-400 bg-zinc-50 dark:bg-zinc-900/50">
+                          <th className="py-2 px-3 w-8" />
+                          <th className="py-2 px-3">Project</th>
+                          <th className="py-2 px-3">Live Domain</th>
+                          <th className="py-2 px-3">Local Dev Port</th>
+                          <th className="py-2 px-3 text-right">Quick Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredProjects.map((project) => (
+                          <ProjectRow
+                            key={project.id}
+                            project={project}
+                            isPortActive={
+                              project.localPort ? !!portStatuses[project.localPort] : false
+                            }
+                            onTogglePin={handleTogglePin}
+                          />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
 
-        {/* Footer info & restore defaults */}
-        <footer className="mt-auto pt-8 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
-          <span>Workspace Hub • Local Enterprise Command Center</span>
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm("Reset links and restore default catalog?")) {
-                const fresh = resetCatalogToDefault();
-                setProjects(fresh.projects);
-                setSaasApps(fresh.saasApps);
-              }
-            }}
-            className="hover:text-zinc-800 dark:hover:text-zinc-200 underline"
-          >
-            Reset Catalog Defaults
-          </button>
-        </footer>
-      </main>
+          {/* SaaS & Daily Web Apps Section */}
+          {filteredSaaS.length > 0 && (
+            <section className="mb-8">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xs font-bold tracking-widest uppercase text-zinc-500">
+                  Cloud & Web Services ({filteredSaaS.length})
+                </h2>
+              </div>
+
+              {viewMode === "grid" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                  {filteredSaaS.map((app) => (
+                    <SaaSAppCard key={app.id} app={app} onTogglePin={handleTogglePin} />
+                  ))}
+                </div>
+              ) : (
+                <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-900 shadow-xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-zinc-200 dark:border-zinc-800 text-[10px] font-mono uppercase tracking-wider text-zinc-400 bg-zinc-50 dark:bg-zinc-900/50">
+                          <th className="py-2 px-3 w-8" />
+                          <th className="py-2 px-3">Service</th>
+                          <th className="py-2 px-3">Domain</th>
+                          <th className="py-2 px-3">Description</th>
+                          <th className="py-2 px-3 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredSaaS.map((app) => (
+                          <SaaSAppRow key={app.id} app={app} onTogglePin={handleTogglePin} />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Empty Search/Filter State */}
+          {filteredProjects.length === 0 && filteredSaaS.length === 0 && (
+            <div className="py-16 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-lg">
+              <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                No apps or projects match your filters
+              </p>
+              <p className="text-xs text-zinc-400 mt-1">
+                Try searching with another keyword or resetting the filter scope.
+              </p>
+            </div>
+          )}
+
+          {/* Footer Info & Reset Option */}
+          <footer className="mt-auto pt-8 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
+            <span>Workspace Hub • Professional Developer Command Center</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm("Reset catalog and reload all verified seed projects?")) {
+                  const fresh = resetCatalogToDefault();
+                  setProjects(fresh.projects);
+                  setSaasApps(fresh.saasApps);
+                }
+              }}
+              className="hover:text-zinc-700 dark:hover:text-zinc-300 underline"
+            >
+              Reset Seed Catalog
+            </button>
+          </footer>
+        </main>
+      </div>
 
       <CommandPalette
         isOpen={isCommandOpen}
