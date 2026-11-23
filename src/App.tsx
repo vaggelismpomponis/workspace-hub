@@ -379,7 +379,7 @@ export default function App() {
           )}
 
           {filteredProjects.length > 0 && filteredSaaS.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 xl:gap-8 items-start mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 xl:gap-8 items-start mb-8">
               <ProjectsSection
                 projects={filteredProjects}
                 portStatuses={portStatuses}
