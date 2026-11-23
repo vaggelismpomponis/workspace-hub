@@ -49,7 +49,7 @@ export function TopBar({
 
   return (
     <header className="w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur sticky top-0 z-20">
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col gap-3">
+      <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex flex-col gap-3">
         {/* Row 1: Mobile toggle, Title & Action buttons */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
