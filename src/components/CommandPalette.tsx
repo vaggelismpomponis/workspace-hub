@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Search, X } from "lucide-react";
+import { ExternalLink, Search, Star, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { HubItem } from "../types";
@@ -26,22 +26,28 @@ export function CommandPalette({ isOpen, onClose, items }: CommandPaletteProps) 
     setSelectedIndex(0);
   };
 
-  const filteredItems = items.filter((item) => {
-    const q = query.toLowerCase().trim();
-    if (!q) return true;
-    const matchesDomain =
-      item.category === "projects"
-        ? item.liveDomain?.toLowerCase().includes(q)
-        : item.domain?.toLowerCase().includes(q);
+  const filteredItems = items
+    .filter((item) => {
+      const q = query.toLowerCase().trim();
+      if (!q) return true;
+      const matchesDomain =
+        item.category === "projects"
+          ? item.liveDomain?.toLowerCase().includes(q)
+          : item.domain?.toLowerCase().includes(q);
 
-    return (
-      item.name.toLowerCase().includes(q) ||
-      item.description.toLowerCase().includes(q) ||
-      matchesDomain ||
-      item.tags.some((t) => t.toLowerCase().includes(q)) ||
-      (item.category === "projects" && item.localPort && item.localPort.toString().includes(q))
-    );
-  });
+      return (
+        item.name.toLowerCase().includes(q) ||
+        item.description.toLowerCase().includes(q) ||
+        matchesDomain ||
+        item.tags.some((t) => t.toLowerCase().includes(q)) ||
+        (item.category === "projects" && item.localPort && item.localPort.toString().includes(q))
+      );
+    })
+    .sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return 0;
+    });
 
   useEffect(() => {
     if (!isOpen) {
@@ -169,6 +175,9 @@ export function CommandPalette({ isOpen, onClose, items }: CommandPaletteProps) 
                         <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
                           {item.name}
                         </span>
+                        {item.isPinned && (
+                          <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+                        )}
                         {domainBadge && (
                           <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
                             {domainBadge}

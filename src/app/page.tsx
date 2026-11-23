@@ -125,11 +125,11 @@ export default function WorkspaceHubPage() {
     }
   };
 
-  // Filtered lists based on category, search, and scope
+  // Filtered lists based on category, search, and scope (starred/pinned always at top)
   const filteredProjects = useMemo(() => {
     if (activeCategory !== "all" && activeCategory !== "projects") return [];
 
-    return projects.filter((p) => {
+    const matches = projects.filter((p) => {
       // Search query
       if (searchQuery) {
         const q = searchQuery.toLowerCase().trim();
@@ -155,12 +155,18 @@ export default function WorkspaceHubPage() {
 
       return true;
     });
+
+    return [...matches].sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return 0;
+    });
   }, [projects, activeCategory, searchQuery, filterScope, portStatuses]);
 
   const filteredSaaS = useMemo(() => {
     if (activeCategory === "projects") return [];
 
-    return saasApps.filter((s) => {
+    const matches = saasApps.filter((s) => {
       if (activeCategory !== "all" && s.category !== activeCategory) return false;
 
       // Search query
@@ -180,6 +186,12 @@ export default function WorkspaceHubPage() {
       if (filterScope === "pinned") return !!s.isPinned;
 
       return true;
+    });
+
+    return [...matches].sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return 0;
     });
   }, [saasApps, activeCategory, searchQuery, filterScope]);
 
