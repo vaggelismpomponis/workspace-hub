@@ -104,13 +104,13 @@ export function SyncModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs select-none"
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs select-none"
       role="dialog"
       aria-modal="true"
     >
       <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
 
-      <div className="relative w-full max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-2xl overflow-hidden flex flex-col">
+      <div className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-2xl flex flex-col">
         {/* Header */}
         <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -156,30 +156,32 @@ export function SyncModal({
               )}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 value={inputKey}
                 onChange={(e) => setInputKey(e.target.value)}
                 placeholder="e.g. my-private-vault-481"
-                className="flex-1 px-3 py-1.5 font-mono text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-400"
+                className="w-full sm:flex-1 px-3 py-1.5 font-mono text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-400"
               />
-              <button
-                type="button"
-                onClick={handleGenerateKey}
-                className="px-2.5 py-1.5 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 rounded font-medium transition-colors"
-                title="Generate new unique key"
-              >
-                Generate
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveKey}
-                disabled={isSyncing}
-                className="px-3.5 py-1.5 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-semibold rounded transition-colors disabled:opacity-50"
-              >
-                Connect
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleGenerateKey}
+                  className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 rounded font-medium transition-colors text-center"
+                  title="Generate new unique key"
+                >
+                  Generate
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveKey}
+                  disabled={isSyncing}
+                  className="flex-1 sm:flex-initial px-3.5 py-1.5 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-semibold rounded transition-colors disabled:opacity-50 text-center"
+                >
+                  Connect
+                </button>
+              </div>
             </div>
 
             <p className="text-[11px] text-zinc-500">

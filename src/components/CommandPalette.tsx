@@ -101,7 +101,7 @@ export function CommandPalette({ isOpen, onClose, items }: CommandPaletteProps) 
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-start justify-center p-4 pt-16 sm:pt-24"
+      className="fixed inset-0 z-[99999] flex items-start justify-center p-3 sm:p-4 pt-12 sm:pt-24"
       role="dialog"
       aria-modal="true"
     >
@@ -111,7 +111,7 @@ export function CommandPalette({ isOpen, onClose, items }: CommandPaletteProps) 
         aria-hidden="true"
       />
 
-      <div className="relative w-full max-w-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[75vh]">
+      <div className="relative w-full max-w-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[85dvh]">
         <div className="flex items-center px-3 py-2.5 border-b border-zinc-200 dark:border-zinc-800 gap-2">
           <Search className="w-4 h-4 text-zinc-400 shrink-0" />
           <input
@@ -198,8 +198,10 @@ export function CommandPalette({ isOpen, onClose, items }: CommandPaletteProps) 
         </div>
 
         <div className="px-3 py-2 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 flex items-center justify-between text-[11px] text-zinc-500">
-          <span>Use ↑ ↓ to navigate</span>
-          <span>Press Enter to open</span>
+          <span className="hidden sm:inline">Use ↑ ↓ to navigate</span>
+          <span className="sm:hidden">{filteredItems.length} found</span>
+          <span className="hidden sm:inline">Press Enter to open</span>
+          <span className="sm:hidden">Tap to open</span>
         </div>
       </div>
     </div>,

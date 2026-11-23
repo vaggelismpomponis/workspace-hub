@@ -20,7 +20,7 @@ export function ProjectCard({ project, isPortActive, onTogglePin }: ProjectCardP
   };
 
   return (
-    <article className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 bg-white dark:bg-zinc-900 flex flex-col justify-between hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
+    <article className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-3.5 sm:p-4 bg-white dark:bg-zinc-900 flex flex-col justify-between hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
       <div>
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2.5">
@@ -88,7 +88,7 @@ export function ProjectCard({ project, isPortActive, onTogglePin }: ProjectCardP
       </div>
 
       <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2 text-xs">
+        <div className="flex items-center justify-between gap-2 text-xs flex-wrap sm:flex-nowrap">
           {project.localPort ? (
             <a
               href={`http://localhost:${project.localPort}`}
@@ -128,7 +128,7 @@ export function ProjectCard({ project, isPortActive, onTogglePin }: ProjectCardP
           </button>
         </div>
 
-        <div className="flex items-center gap-2 pt-1 text-xs text-zinc-600 dark:text-zinc-400">
+        <div className="flex items-center gap-3 pt-1 text-xs text-zinc-600 dark:text-zinc-400 flex-wrap">
           {project.liveUrl && !project.liveDomain && (
             <a
               href={project.liveUrl}

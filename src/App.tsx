@@ -373,7 +373,7 @@ export default function App() {
           pinnedCount={pinnedItems.length}
         />
 
-        <main className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-6 flex-1 flex flex-col">
+        <main className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-3 sm:px-6 py-4 sm:py-6 flex-1 flex flex-col">
           {filterScope === "all" && !searchQuery && (
             <QuickLauncher pinnedItems={pinnedItems} onOpenAll={handleOpenPinned} />
           )}
@@ -427,7 +427,7 @@ export default function App() {
             </div>
           )}
 
-          <footer className="mt-auto pt-8 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
+          <footer className="mt-auto pt-6 sm:pt-8 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400 text-center sm:text-left">
             <span>Workspace Hub • Professional Developer Command Center</span>
             <button
               type="button"

@@ -10,7 +10,7 @@ interface SaaSAppCardProps {
 
 export function SaaSAppCard({ app, onTogglePin }: SaaSAppCardProps) {
   return (
-    <article className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 bg-white dark:bg-zinc-900 flex flex-col justify-between hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
+    <article className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-3.5 sm:p-4 bg-white dark:bg-zinc-900 flex flex-col justify-between hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
       <div>
         <div className="flex items-start justify-between gap-2 mb-2">
           <div>

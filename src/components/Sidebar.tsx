@@ -17,6 +17,8 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { AppCategory, PortStatusMap } from "../types";
 import { Logo } from "./Logo";
 
@@ -57,6 +59,30 @@ export function Sidebar({
   const activePorts = Object.entries(portStatuses)
     .filter(([_, active]) => active)
     .map(([port]) => Number.parseInt(port, 10));
+
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onCloseMobile();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [mobileOpen, onCloseMobile]);
 
   const content = (
     <div className="flex flex-col h-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 select-none">
@@ -186,19 +212,22 @@ export function Sidebar({
         {content}
       </aside>
 
-      {/* Mobile Backdrop & Drawer */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-[99999] lg:hidden flex">
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={onCloseMobile}
-            aria-hidden="true"
-          />
-          <div className="relative w-72 max-w-[85vw] h-full shadow-2xl flex flex-col">
-            {content}
-          </div>
-        </div>
-      )}
+      {/* Mobile Backdrop & Drawer Portaled */}
+      {mounted &&
+        mobileOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[99999] lg:hidden flex" role="dialog" aria-modal="true">
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+              onClick={onCloseMobile}
+              aria-hidden="true"
+            />
+            <div className="relative w-72 max-w-[85vw] h-full shadow-2xl flex flex-col bg-white dark:bg-zinc-950">
+              {content}
+            </div>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

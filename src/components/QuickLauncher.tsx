@@ -12,7 +12,7 @@ export function QuickLauncher({ pinnedItems, onOpenAll }: QuickLauncherProps) {
   if (pinnedItems.length === 0) return null;
 
   return (
-    <section className="w-full mb-6 p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50/60 dark:bg-zinc-900/40">
+    <section className="w-full mb-5 sm:mb-6 p-3 sm:p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50/60 dark:bg-zinc-900/40">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
@@ -25,11 +25,12 @@ export function QuickLauncher({ pinnedItems, onOpenAll }: QuickLauncherProps) {
           onClick={onOpenAll}
           className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium transition-colors"
         >
-          Open Pinned Apps
+          <span className="hidden sm:inline">Open Pinned Apps</span>
+          <span className="sm:hidden">Open All</span>
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5 sm:gap-2">
         {pinnedItems.map((item) => {
           const targetUrl =
             item.category === "projects"
