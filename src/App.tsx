@@ -73,8 +73,11 @@ export default function App() {
     try {
       const res = await fetch(`/api/ping?ports=${ports.join(",")}`);
       if (res.ok) {
-        const json = await res.json();
-        if (json.statuses) setPortStatuses(json.statuses);
+        const contentType = res.headers.get("content-type");
+        if (contentType?.includes("application/json")) {
+          const json = await res.json();
+          if (json.statuses) setPortStatuses(json.statuses);
+        }
       }
     } catch (err) {
       // In standalone/mobile, local dev port pinging is non-fatal
