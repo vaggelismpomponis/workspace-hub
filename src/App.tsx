@@ -43,6 +43,12 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const isRemoteUpdatingRef = useRef(false);
+  const isSyncingRef = useRef(false);
+
+  const projectsRef = useRef(projects);
+  projectsRef.current = projects;
+  const saasAppsRef = useRef(saasApps);
+  saasAppsRef.current = saasApps;
 
   // Initialize data from localStorage on mount
   useEffect(() => {
@@ -105,10 +111,12 @@ export default function App() {
 
   // Sync with Supabase (pull latest & subscribe to realtime changes)
   const triggerSync = useCallback(async () => {
+    if (isSyncingRef.current) return;
     const key = getSyncKey();
     setSyncKeyState(key);
     if (!key) return;
 
+    isSyncingRef.current = true;
     setIsSyncing(true);
     try {
       const remote = await fetchRemoteWorkspace(key);
@@ -128,13 +136,13 @@ export default function App() {
         setLastSyncedAt(new Date());
         setTimeout(() => {
           isRemoteUpdatingRef.current = false;
-        }, 300);
+        }, 500);
       } else {
         // First time connecting this key: push current local workspace to cloud
         const currentPinned = loadPinnedIds() || [];
         await pushRemoteWorkspace(key, {
-          projects,
-          saasApps,
+          projects: projectsRef.current,
+          saasApps: saasAppsRef.current,
           pinnedIds: currentPinned,
         });
         setLastSyncedAt(new Date());
@@ -142,11 +150,12 @@ export default function App() {
     } catch (err) {
       console.error("Cloud sync failed", err);
     } finally {
+      isSyncingRef.current = false;
       setIsSyncing(false);
     }
-  }, [projects, saasApps]);
+  }, []);
 
-  // Trigger sync on mount if key exists
+  // Trigger sync once on mount if key exists
   useEffect(() => {
     const key = getSyncKey();
     if (key) {
@@ -175,7 +184,7 @@ export default function App() {
       setLastSyncedAt(new Date());
       setTimeout(() => {
         isRemoteUpdatingRef.current = false;
-      }, 300);
+      }, 500);
     });
 
     return () => {
