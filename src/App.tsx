@@ -1,11 +1,10 @@
-"use client";
-
 import { AddAppModal } from "@/components/AddAppModal";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ProjectsSection } from "@/components/ProjectsSection";
 import { QuickLauncher } from "@/components/QuickLauncher";
 import { SaaSSection } from "@/components/SaaSSection";
 import { Sidebar } from "@/components/Sidebar";
+import { SyncModal } from "@/components/SyncModal";
 import { type FilterScope, TopBar, type ViewMode } from "@/components/TopBar";
 import { initialProjects, initialSaaSApps } from "@/data/initialCatalog";
 import {
@@ -16,10 +15,16 @@ import {
   saveProjects,
   saveSaaSApps,
 } from "@/lib/storage";
+import {
+  fetchRemoteWorkspace,
+  getSyncKey,
+  pushRemoteWorkspace,
+  subscribeToRemoteWorkspace,
+} from "@/lib/supabase";
 import type { AppCategory, HubItem, PortStatusMap, ProjectItem, SaaSAppItem } from "@/types";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-export default function WorkspaceHubPage() {
+export default function App() {
   const [projects, setProjects] = useState<ProjectItem[]>(initialProjects);
   const [saasApps, setSaasApps] = useState<SaaSAppItem[]>(initialSaaSApps);
   const [portStatuses, setPortStatuses] = useState<PortStatusMap>({});
@@ -31,6 +36,13 @@ export default function WorkspaceHubPage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+
+  // Sync state
+  const [syncKey, setSyncKeyState] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const isRemoteUpdatingRef = useRef(false);
 
   // Initialize data from localStorage on mount
   useEffect(() => {
@@ -38,6 +50,8 @@ export default function WorkspaceHubPage() {
       const data = loadCatalog();
       if (data?.projects?.length > 0) setProjects(data.projects);
       if (data?.saasApps?.length > 0) setSaasApps(data.saasApps);
+      const savedKey = getSyncKey();
+      if (savedKey) setSyncKeyState(savedKey);
     } catch (err) {
       console.error("Storage load error", err);
     }
@@ -63,7 +77,8 @@ export default function WorkspaceHubPage() {
         if (json.statuses) setPortStatuses(json.statuses);
       }
     } catch (err) {
-      console.error("Port ping error", err);
+      // In standalone/mobile, local dev port pinging is non-fatal
+      console.debug("Port ping not available or offline", err);
     } finally {
       setIsPinging(false);
     }
@@ -85,6 +100,102 @@ export default function WorkspaceHubPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Sync with Supabase (pull latest & subscribe to realtime changes)
+  const triggerSync = useCallback(async () => {
+    const key = getSyncKey();
+    setSyncKeyState(key);
+    if (!key) return;
+
+    setIsSyncing(true);
+    try {
+      const remote = await fetchRemoteWorkspace(key);
+      if (remote) {
+        isRemoteUpdatingRef.current = true;
+        if (remote.projects?.length > 0) {
+          setProjects(remote.projects);
+          saveProjects(remote.projects);
+        }
+        if (remote.saas_apps?.length > 0) {
+          setSaasApps(remote.saas_apps);
+          saveSaaSApps(remote.saas_apps);
+        }
+        if (Array.isArray(remote.pinned_ids)) {
+          savePinnedIds(remote.pinned_ids);
+        }
+        setLastSyncedAt(new Date());
+        setTimeout(() => {
+          isRemoteUpdatingRef.current = false;
+        }, 300);
+      } else {
+        // First time connecting this key: push current local workspace to cloud
+        const currentPinned = loadPinnedIds() || [];
+        await pushRemoteWorkspace(key, {
+          projects,
+          saasApps,
+          pinnedIds: currentPinned,
+        });
+        setLastSyncedAt(new Date());
+      }
+    } catch (err) {
+      console.error("Cloud sync failed", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [projects, saasApps]);
+
+  // Trigger sync on mount if key exists
+  useEffect(() => {
+    const key = getSyncKey();
+    if (key) {
+      triggerSync();
+    }
+  }, [triggerSync]);
+
+  // Realtime subscription: updates when another device (mobile, laptop) modifies the workspace
+  useEffect(() => {
+    const key = syncKey;
+    if (!key) return;
+
+    const unsubscribe = subscribeToRemoteWorkspace(key, (remote) => {
+      isRemoteUpdatingRef.current = true;
+      if (remote.projects?.length > 0) {
+        setProjects(remote.projects);
+        saveProjects(remote.projects);
+      }
+      if (remote.saas_apps?.length > 0) {
+        setSaasApps(remote.saas_apps);
+        saveSaaSApps(remote.saas_apps);
+      }
+      if (Array.isArray(remote.pinned_ids)) {
+        savePinnedIds(remote.pinned_ids);
+      }
+      setLastSyncedAt(new Date());
+      setTimeout(() => {
+        isRemoteUpdatingRef.current = false;
+      }, 300);
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [syncKey]);
+
+  // Push local changes to Supabase
+  const pushChangesToCloud = useCallback(
+    (updatedProjects: ProjectItem[], updatedSaaS: SaaSAppItem[], updatedPinned: string[]) => {
+      const key = getSyncKey();
+      if (!key || isRemoteUpdatingRef.current) return;
+      pushRemoteWorkspace(key, {
+        projects: updatedProjects,
+        saasApps: updatedSaaS,
+        pinnedIds: updatedPinned,
+      }).then((success) => {
+        if (success) setLastSyncedAt(new Date());
+      });
+    },
+    [],
+  );
+
   const allItems: HubItem[] = useMemo(() => [...projects, ...saasApps], [projects, saasApps]);
 
   const pinnedItems: HubItem[] = useMemo(
@@ -93,20 +204,23 @@ export default function WorkspaceHubPage() {
   );
 
   const handleTogglePin = (id: string) => {
+    let nextProjects = projects;
+    let nextSaaS = saasApps;
+
     setProjects((prev) => {
       const exists = prev.some((p) => p.id === id);
       if (!exists) return prev;
-      const next = prev.map((p) => (p.id === id ? { ...p, isPinned: !p.isPinned } : p));
-      saveProjects(next);
-      return next;
+      nextProjects = prev.map((p) => (p.id === id ? { ...p, isPinned: !p.isPinned } : p));
+      saveProjects(nextProjects);
+      return nextProjects;
     });
 
     setSaasApps((prev) => {
       const exists = prev.some((s) => s.id === id);
       if (!exists) return prev;
-      const next = prev.map((s) => (s.id === id ? { ...s, isPinned: !s.isPinned } : s));
-      saveSaaSApps(next);
-      return next;
+      nextSaaS = prev.map((s) => (s.id === id ? { ...s, isPinned: !s.isPinned } : s));
+      saveSaaSApps(nextSaaS);
+      return nextSaaS;
     });
 
     const currentPinned = loadPinnedIds() || [];
@@ -114,12 +228,15 @@ export default function WorkspaceHubPage() {
       ? currentPinned.filter((item) => item !== id)
       : [...currentPinned, id];
     savePinnedIds(nextPinned);
+
+    pushChangesToCloud(nextProjects, nextSaaS, nextPinned);
   };
 
   const handleAddProject = (newProj: ProjectItem) => {
     setProjects((prev) => {
       const next = [newProj, ...prev];
       saveProjects(next);
+      pushChangesToCloud(next, saasApps, loadPinnedIds() || []);
       return next;
     });
   };
@@ -128,6 +245,7 @@ export default function WorkspaceHubPage() {
     setSaasApps((prev) => {
       const next = [newApp, ...prev];
       saveSaaSApps(next);
+      pushChangesToCloud(projects, next, loadPinnedIds() || []);
       return next;
     });
   };
@@ -142,33 +260,25 @@ export default function WorkspaceHubPage() {
     }
   };
 
-  // Filtered lists based on category, search, and scope (starred/pinned always at top)
+  // Filtered lists (starred/pinned items prioritized at the top)
   const filteredProjects = useMemo(() => {
     if (activeCategory !== "all" && activeCategory !== "projects") return [];
 
     const matches = projects.filter((p) => {
-      // Search query
       if (searchQuery) {
         const q = searchQuery.toLowerCase().trim();
-        const matches =
+        const matchesQuery =
           p.name.toLowerCase().includes(q) ||
           p.description.toLowerCase().includes(q) ||
           p.liveDomain?.toLowerCase().includes(q) ||
           p.tags.some((t) => t.toLowerCase().includes(q)) ||
           p.localPort?.toString().includes(q);
-        if (!matches) return false;
+        if (!matchesQuery) return false;
       }
 
-      // Filter scope
-      if (filterScope === "active-ports") {
-        return p.localPort ? !!portStatuses[p.localPort] : false;
-      }
-      if (filterScope === "live-domains") {
-        return !!p.liveDomain;
-      }
-      if (filterScope === "pinned") {
-        return !!p.isPinned;
-      }
+      if (filterScope === "active-ports") return p.localPort ? !!portStatuses[p.localPort] : false;
+      if (filterScope === "live-domains") return !!p.liveDomain;
+      if (filterScope === "pinned") return !!p.isPinned;
 
       return true;
     });
@@ -186,18 +296,16 @@ export default function WorkspaceHubPage() {
     const matches = saasApps.filter((s) => {
       if (activeCategory !== "all" && s.category !== activeCategory) return false;
 
-      // Search query
       if (searchQuery) {
         const q = searchQuery.toLowerCase().trim();
-        const matches =
+        const matchesQuery =
           s.name.toLowerCase().includes(q) ||
           s.description.toLowerCase().includes(q) ||
           s.domain?.toLowerCase().includes(q) ||
           s.tags.some((t) => t.toLowerCase().includes(q));
-        if (!matches) return false;
+        if (!matchesQuery) return false;
       }
 
-      // Filter scope
       if (filterScope === "active-ports") return false;
       if (filterScope === "live-domains") return !!s.domain;
       if (filterScope === "pinned") return !!s.isPinned;
@@ -231,7 +339,6 @@ export default function WorkspaceHubPage() {
 
   return (
     <div className="min-h-dvh flex bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
-      {/* Sidebar Navigation */}
       <Sidebar
         activeCategory={activeCategory}
         onSelectCategory={setActiveCategory}
@@ -244,7 +351,6 @@ export default function WorkspaceHubPage() {
         onCloseMobile={() => setMobileSidebarOpen(false)}
       />
 
-      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar
           activeCategory={activeCategory}
@@ -256,18 +362,19 @@ export default function WorkspaceHubPage() {
           onViewModeChange={setViewMode}
           onOpenAddModal={() => setIsAddModalOpen(true)}
           onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
+          onOpenSyncModal={() => setIsSyncModalOpen(true)}
+          syncKey={syncKey}
+          isSyncing={isSyncing}
           activePortCount={activePortCount}
           liveDomainCount={liveDomainCount}
           pinnedCount={pinnedItems.length}
         />
 
         <main className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-6 flex-1 flex flex-col">
-          {/* Daily Suite */}
           {filterScope === "all" && !searchQuery && (
             <QuickLauncher pinnedItems={pinnedItems} onOpenAll={handleOpenPinned} />
           )}
 
-          {/* Main Workspace Sections: Side by Side on Overview / Dual View */}
           {filteredProjects.length > 0 && filteredSaaS.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 xl:gap-8 items-start mb-8">
               <ProjectsSection
@@ -306,7 +413,6 @@ export default function WorkspaceHubPage() {
             </div>
           )}
 
-          {/* Empty Search/Filter State */}
           {filteredProjects.length === 0 && filteredSaaS.length === 0 && (
             <div className="py-16 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-lg">
               <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
@@ -318,7 +424,6 @@ export default function WorkspaceHubPage() {
             </div>
           )}
 
-          {/* Footer Info & Reset Option */}
           <footer className="mt-auto pt-8 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
             <span>Workspace Hub • Professional Developer Command Center</span>
             <button
@@ -349,6 +454,14 @@ export default function WorkspaceHubPage() {
         onClose={() => setIsAddModalOpen(false)}
         onAddProject={handleAddProject}
         onAddSaaS={handleAddSaaS}
+      />
+
+      <SyncModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+        onSyncTrigger={triggerSync}
+        isSyncing={isSyncing}
+        lastSyncedAt={lastSyncedAt}
       />
     </div>
   );

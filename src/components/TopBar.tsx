@@ -17,6 +17,9 @@ interface TopBarProps {
   onViewModeChange: (mode: ViewMode) => void;
   onOpenAddModal: () => void;
   onOpenMobileSidebar: () => void;
+  onOpenSyncModal: () => void;
+  syncKey: string | null;
+  isSyncing: boolean;
   activePortCount: number;
   liveDomainCount: number;
   pinnedCount: number;
@@ -32,6 +35,9 @@ export function TopBar({
   onViewModeChange,
   onOpenAddModal,
   onOpenMobileSidebar,
+  onOpenSyncModal,
+  syncKey,
+  isSyncing,
   activePortCount,
   liveDomainCount,
   pinnedCount,
@@ -99,6 +105,24 @@ export function TopBar({
                 <List className="w-3.5 h-3.5" />
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={onOpenSyncModal}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-300 transition-colors"
+              title={syncKey ? `Connected to Sync Key: ${syncKey}` : "Connect cloud sync"}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  syncKey
+                    ? isSyncing
+                      ? "bg-amber-500 animate-spin"
+                      : "bg-emerald-500"
+                    : "bg-zinc-400"
+                }`}
+              />
+              <span className="hidden sm:inline">{syncKey ? "Synced" : "Sync"}</span>
+            </button>
 
             <Button size="sm" onClick={onOpenAddModal}>
               <Plus className="w-3.5 h-3.5 mr-1" />
