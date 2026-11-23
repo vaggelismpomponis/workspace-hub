@@ -1,0 +1,8 @@
+# Cursor AI Rules & Directives
+See AGENTS.md for full production directives.
+
+- Anti-Slop UI: Never use purple gradients, floating blurred blobs, pill buttons, boxed icons, or boxed step counters.
+- Mobile-First CSS: Unprefixed Tailwind targets mobile (<640px). Use min-h-dvh and w-full max-w-*.
+- Modals: Always portal to document.body with z-[99999].
+- Clean React: Sub-150-line components, no 'any', zero useEffect for derived state or user actions.
+- Backend: In .NET, NEVER use AutoMapper—use explicit ToDto() extensions and .AsNoTracking(). In Supabase, never select('*').
