@@ -44,6 +44,7 @@ export default function App() {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const isRemoteUpdatingRef = useRef(false);
   const isSyncingRef = useRef(false);
+  const lastLocalPushTimeRef = useRef<number>(0);
 
   const projectsRef = useRef(projects);
   projectsRef.current = projects;
@@ -122,17 +123,27 @@ export default function App() {
       const remote = await fetchRemoteWorkspace(key);
       if (remote) {
         isRemoteUpdatingRef.current = true;
-        if (remote.projects?.length > 0) {
-          setProjects(remote.projects);
-          saveProjects(remote.projects);
+        const remotePinned = Array.isArray(remote.pinned_ids) ? remote.pinned_ids : [];
+        const pinnedSet = new Set(remotePinned);
+
+        const reconciledProjects = (remote.projects || []).map((p) => ({
+          ...p,
+          isPinned: pinnedSet.has(p.id),
+        }));
+        const reconciledSaaS = (remote.saas_apps || []).map((s) => ({
+          ...s,
+          isPinned: pinnedSet.has(s.id),
+        }));
+
+        if (reconciledProjects.length > 0) {
+          setProjects(reconciledProjects);
+          saveProjects(reconciledProjects);
         }
-        if (remote.saas_apps?.length > 0) {
-          setSaasApps(remote.saas_apps);
-          saveSaaSApps(remote.saas_apps);
+        if (reconciledSaaS.length > 0) {
+          setSaasApps(reconciledSaaS);
+          saveSaaSApps(reconciledSaaS);
         }
-        if (Array.isArray(remote.pinned_ids)) {
-          savePinnedIds(remote.pinned_ids);
-        }
+        savePinnedIds(remotePinned);
         setLastSyncedAt(new Date());
         setTimeout(() => {
           isRemoteUpdatingRef.current = false;
@@ -169,18 +180,33 @@ export default function App() {
     if (!key) return;
 
     const unsubscribe = subscribeToRemoteWorkspace(key, (remote) => {
+      // Prevent self-echo jitter if local user pushed mutation within 2.5 seconds
+      if (Date.now() - lastLocalPushTimeRef.current < 2500) {
+        return;
+      }
+
       isRemoteUpdatingRef.current = true;
-      if (remote.projects?.length > 0) {
-        setProjects(remote.projects);
-        saveProjects(remote.projects);
+      const remotePinned = Array.isArray(remote.pinned_ids) ? remote.pinned_ids : [];
+      const pinnedSet = new Set(remotePinned);
+
+      const reconciledProjects = (remote.projects || []).map((p) => ({
+        ...p,
+        isPinned: pinnedSet.has(p.id),
+      }));
+      const reconciledSaaS = (remote.saas_apps || []).map((s) => ({
+        ...s,
+        isPinned: pinnedSet.has(s.id),
+      }));
+
+      if (reconciledProjects.length > 0) {
+        setProjects(reconciledProjects);
+        saveProjects(reconciledProjects);
       }
-      if (remote.saas_apps?.length > 0) {
-        setSaasApps(remote.saas_apps);
-        saveSaaSApps(remote.saas_apps);
+      if (reconciledSaaS.length > 0) {
+        setSaasApps(reconciledSaaS);
+        saveSaaSApps(reconciledSaaS);
       }
-      if (Array.isArray(remote.pinned_ids)) {
-        savePinnedIds(remote.pinned_ids);
-      }
+      savePinnedIds(remotePinned);
       setLastSyncedAt(new Date());
       setTimeout(() => {
         isRemoteUpdatingRef.current = false;
@@ -196,7 +222,7 @@ export default function App() {
   const pushChangesToCloud = useCallback(
     (updatedProjects: ProjectItem[], updatedSaaS: SaaSAppItem[], updatedPinned: string[]) => {
       const key = getSyncKey();
-      if (!key || isRemoteUpdatingRef.current) return;
+      if (!key) return;
       pushRemoteWorkspace(key, {
         projects: updatedProjects,
         saasApps: updatedSaaS,
@@ -216,50 +242,53 @@ export default function App() {
   );
 
   const handleTogglePin = (id: string) => {
-    let nextProjects = projects;
-    let nextSaaS = saasApps;
-
-    setProjects((prev) => {
-      const exists = prev.some((p) => p.id === id);
-      if (!exists) return prev;
-      nextProjects = prev.map((p) => (p.id === id ? { ...p, isPinned: !p.isPinned } : p));
-      saveProjects(nextProjects);
-      return nextProjects;
-    });
-
-    setSaasApps((prev) => {
-      const exists = prev.some((s) => s.id === id);
-      if (!exists) return prev;
-      nextSaaS = prev.map((s) => (s.id === id ? { ...s, isPinned: !s.isPinned } : s));
-      saveSaaSApps(nextSaaS);
-      return nextSaaS;
-    });
-
     const currentPinned = loadPinnedIds() || [];
-    const nextPinned = currentPinned.includes(id)
+    const isCurrentlyPinned = currentPinned.includes(id);
+    const nextPinned = isCurrentlyPinned
       ? currentPinned.filter((item) => item !== id)
       : [...currentPinned, id];
+    const pinnedSet = new Set(nextPinned);
+
+    const nextProjects = projectsRef.current.map((p) => ({
+      ...p,
+      isPinned: pinnedSet.has(p.id),
+    }));
+
+    const nextSaaS = saasAppsRef.current.map((s) => ({
+      ...s,
+      isPinned: pinnedSet.has(s.id),
+    }));
+
+    setProjects(nextProjects);
+    setSaasApps(nextSaaS);
+    saveProjects(nextProjects);
+    saveSaaSApps(nextSaaS);
     savePinnedIds(nextPinned);
 
+    lastLocalPushTimeRef.current = Date.now();
     pushChangesToCloud(nextProjects, nextSaaS, nextPinned);
   };
 
   const handleAddProject = (newProj: ProjectItem) => {
-    setProjects((prev) => {
-      const next = [newProj, ...prev];
-      saveProjects(next);
-      pushChangesToCloud(next, saasApps, loadPinnedIds() || []);
-      return next;
-    });
+    const currentPinned = loadPinnedIds() || [];
+    const nextPinned = newProj.isPinned ? [...currentPinned, newProj.id] : currentPinned;
+    const nextProjects = [newProj, ...projectsRef.current];
+    setProjects(nextProjects);
+    saveProjects(nextProjects);
+    if (newProj.isPinned) savePinnedIds(nextPinned);
+    lastLocalPushTimeRef.current = Date.now();
+    pushChangesToCloud(nextProjects, saasAppsRef.current, nextPinned);
   };
 
   const handleAddSaaS = (newApp: SaaSAppItem) => {
-    setSaasApps((prev) => {
-      const next = [newApp, ...prev];
-      saveSaaSApps(next);
-      pushChangesToCloud(projects, next, loadPinnedIds() || []);
-      return next;
-    });
+    const currentPinned = loadPinnedIds() || [];
+    const nextPinned = newApp.isPinned ? [...currentPinned, newApp.id] : currentPinned;
+    const nextSaaS = [newApp, ...saasAppsRef.current];
+    setSaasApps(nextSaaS);
+    saveSaaSApps(nextSaaS);
+    if (newApp.isPinned) savePinnedIds(nextPinned);
+    lastLocalPushTimeRef.current = Date.now();
+    pushChangesToCloud(projectsRef.current, nextSaaS, nextPinned);
   };
 
   const handleOpenPinned = () => {
@@ -445,6 +474,9 @@ export default function App() {
                   const fresh = resetCatalogToDefault();
                   setProjects(fresh.projects);
                   setSaasApps(fresh.saasApps);
+                  const currentPinned = loadPinnedIds() || [];
+                  lastLocalPushTimeRef.current = Date.now();
+                  pushChangesToCloud(fresh.projects, fresh.saasApps, currentPinned);
                 }
               }}
               className="hover:text-zinc-700 dark:hover:text-zinc-300 underline"
