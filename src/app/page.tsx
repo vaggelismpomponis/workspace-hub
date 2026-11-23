@@ -7,13 +7,14 @@ import { Header } from "@/components/Header";
 import { ProjectCard } from "@/components/ProjectCard";
 import { QuickLauncher } from "@/components/QuickLauncher";
 import { SaaSAppCard } from "@/components/SaaSAppCard";
+import { initialProjects, initialSaaSApps } from "@/data/initialCatalog";
 import { loadCatalog, resetCatalogToDefault, saveCatalog } from "@/lib/storage";
 import type { AppCategory, HubItem, PortStatusMap, ProjectItem, SaaSAppItem } from "@/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export default function WorkspaceHubPage() {
-  const [projects, setProjects] = useState<ProjectItem[]>([]);
-  const [saasApps, setSaasApps] = useState<SaaSAppItem[]>([]);
+  const [projects, setProjects] = useState<ProjectItem[]>(initialProjects);
+  const [saasApps, setSaasApps] = useState<SaaSAppItem[]>(initialSaaSApps);
   const [portStatuses, setPortStatuses] = useState<PortStatusMap>({});
   const [isPinging, setIsPinging] = useState(false);
   const [activeCategory, setActiveCategory] = useState<AppCategory>("all");
@@ -22,9 +23,17 @@ export default function WorkspaceHubPage() {
 
   // Initialize data from localStorage on mount
   useEffect(() => {
-    const data = loadCatalog();
-    setProjects(data.projects);
-    setSaasApps(data.saasApps);
+    try {
+      const data = loadCatalog();
+      if (data?.projects?.length > 0) {
+        setProjects(data.projects);
+      }
+      if (data?.saasApps?.length > 0) {
+        setSaasApps(data.saasApps);
+      }
+    } catch (err) {
+      console.error("Storage load error", err);
+    }
   }, []);
 
   // Ping active ports
