@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Production Architecture | Scaffolded via create-forge",
-  description: "Enterprise-grade Next.js application built with strict engineering directives and anti-slop design standards.",
+  title: "Workspace Hub | Central Developer Command Center",
+  description:
+    "Unified developer portal and launchpad for local workspace projects and daily SaaS apps.",
 };
 
 export default function RootLayout({
@@ -13,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-dvh flex flex-col bg-background text-foreground">
+      <body className="antialiased min-h-dvh flex flex-col bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
         {children}
       </body>
     </html>

@@ -1,8 +1,8 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -40,7 +40,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
       // Focus trap inside modal
       if (e.key === "Tab" && modalRef.current) {
         const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
         );
         if (focusableElements.length === 0) return;
 
@@ -67,7 +67,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
     requestAnimationFrame(() => {
       if (modalRef.current) {
         const firstFocusable = modalRef.current.querySelector<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
         );
         if (firstFocusable) {
           firstFocusable.focus();
@@ -128,6 +128,6 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
         <div>{children}</div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

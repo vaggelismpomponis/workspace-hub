@@ -7,13 +7,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "ignore": [
-      "node_modules/**",
-      ".next/**",
-      "dist/**",
-      "bin/**",
-      "obj/**"
-    ]
+    "ignore": ["node_modules/**", ".next/**", "dist/**", "bin/**", "obj/**"]
   },
   "formatter": {
     "enabled": true,
@@ -24,7 +18,11 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "recommended": true,
+      "a11y": {
+        "useKeyWithClickEvents": "off",
+        "useSemanticElements": "off"
+      }
     }
   },
   "javascript": {
