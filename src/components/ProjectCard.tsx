@@ -23,25 +23,51 @@ export function ProjectCard({ project, isPortActive, onTogglePin }: ProjectCardP
     <article className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 bg-white dark:bg-zinc-900 flex flex-col justify-between hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
       <div>
         <div className="flex items-start justify-between gap-2 mb-2">
-          <div>
-            <p className="text-[11px] font-semibold tracking-widest uppercase text-zinc-500">
-              {project.subCategory}
-            </p>
-            <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-              {project.name}
-            </h3>
+          <div className="flex items-center gap-2.5">
+            {project.logoUrl ? (
+              <img
+                src={project.logoUrl}
+                alt={`${project.name} logo`}
+                className="w-7 h-7 object-contain rounded shrink-0"
+              />
+            ) : null}
+            <div>
+              <p className="text-[11px] font-semibold tracking-widest uppercase text-zinc-500">
+                {project.subCategory}
+              </p>
+              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 leading-snug">
+                {project.name}
+              </h3>
+            </div>
           </div>
+
           <button
             type="button"
             onClick={() => onTogglePin(project.id)}
             aria-label={project.isPinned ? "Unpin project" : "Pin project"}
-            className="text-zinc-400 hover:text-amber-500 transition-colors p-1"
+            className="text-zinc-400 hover:text-amber-500 transition-colors p-1 shrink-0"
           >
             <Star
               className={`w-4 h-4 ${project.isPinned ? "text-amber-500 fill-amber-500" : ""}`}
             />
           </button>
         </div>
+
+        {/* Live domain display if available */}
+        {project.liveDomain && (
+          <div className="mb-2">
+            <a
+              href={project.liveUrl || `https://${project.liveDomain}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 font-mono text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 px-2 py-0.5 rounded hover:border-emerald-400 dark:hover:border-emerald-600 transition-colors"
+            >
+              <Globe className="w-3 h-3 shrink-0" />
+              <span>{project.liveDomain}</span>
+              <ExternalLink className="w-2.5 h-2.5 opacity-70" />
+            </a>
+          </div>
+        )}
 
         <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-3 line-clamp-2">
           {project.description}
@@ -103,7 +129,7 @@ export function ProjectCard({ project, isPortActive, onTogglePin }: ProjectCardP
         </div>
 
         <div className="flex items-center gap-2 pt-1 text-xs text-zinc-600 dark:text-zinc-400">
-          {project.liveUrl && (
+          {project.liveUrl && !project.liveDomain && (
             <a
               href={project.liveUrl}
               target="_blank"

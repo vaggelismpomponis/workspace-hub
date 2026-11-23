@@ -1,8 +1,8 @@
 import { initialProjects, initialSaaSApps } from "../data/initialCatalog";
-import type { HubItem, ProjectItem, SaaSAppItem } from "../types";
+import type { ProjectItem, SaaSAppItem } from "../types";
 
-const STORAGE_KEY_PROJECTS = "workspace_hub_projects_v1";
-const STORAGE_KEY_SAAS = "workspace_hub_saas_v1";
+const STORAGE_KEY_PROJECTS = "workspace_hub_projects_v2";
+const STORAGE_KEY_SAAS = "workspace_hub_saas_v2";
 
 export function loadCatalog(): { projects: ProjectItem[]; saasApps: SaaSAppItem[] } {
   if (typeof window === "undefined") {
@@ -13,8 +13,12 @@ export function loadCatalog(): { projects: ProjectItem[]; saasApps: SaaSAppItem[
     const savedProjects = localStorage.getItem(STORAGE_KEY_PROJECTS);
     const savedSaaS = localStorage.getItem(STORAGE_KEY_SAAS);
 
-    const projects: ProjectItem[] = savedProjects ? JSON.parse(savedProjects) : initialProjects;
+    if (!savedProjects) {
+      saveCatalog(initialProjects, initialSaaSApps);
+      return { projects: initialProjects, saasApps: initialSaaSApps };
+    }
 
+    const projects: ProjectItem[] = JSON.parse(savedProjects);
     const saasApps: SaaSAppItem[] = savedSaaS ? JSON.parse(savedSaaS) : initialSaaSApps;
 
     return { projects, saasApps };

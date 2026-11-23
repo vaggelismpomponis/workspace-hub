@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Star } from "lucide-react";
+import { ExternalLink, Globe, Star } from "lucide-react";
 import type { SaaSAppItem } from "../types";
 
 interface SaaSAppCardProps {
@@ -28,6 +28,15 @@ export function SaaSAppCard({ app, onTogglePin }: SaaSAppCardProps) {
             <Star className={`w-4 h-4 ${app.isPinned ? "text-amber-500 fill-amber-500" : ""}`} />
           </button>
         </div>
+
+        {app.domain && (
+          <div className="mb-2">
+            <span className="inline-flex items-center gap-1 font-mono text-[11px] text-zinc-500 dark:text-zinc-400">
+              <Globe className="w-3 h-3 shrink-0" />
+              <span>{app.domain}</span>
+            </span>
+          </div>
+        )}
 
         <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-3 line-clamp-2">
           {app.description}

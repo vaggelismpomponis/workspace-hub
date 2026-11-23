@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Command, ExternalLink, Search, X } from "lucide-react";
+import { ExternalLink, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { HubItem } from "../types";
@@ -21,21 +21,27 @@ export function CommandPalette({ isOpen, onClose, items }: CommandPaletteProps) 
     setMounted(true);
   }, []);
 
-  const filteredItems = items.filter((item) => {
-    const q = query.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      item.name.toLowerCase().includes(q) ||
-      item.description.toLowerCase().includes(q) ||
-      item.tags.some((t) => t.toLowerCase().includes(q)) ||
-      (item.category === "projects" && item.localPort && item.localPort.toString().includes(q))
-    );
-  });
-
   const handleQueryChange = (val: string) => {
     setQuery(val);
     setSelectedIndex(0);
   };
+
+  const filteredItems = items.filter((item) => {
+    const q = query.toLowerCase().trim();
+    if (!q) return true;
+    const matchesDomain =
+      item.category === "projects"
+        ? item.liveDomain?.toLowerCase().includes(q)
+        : item.domain?.toLowerCase().includes(q);
+
+    return (
+      item.name.toLowerCase().includes(q) ||
+      item.description.toLowerCase().includes(q) ||
+      matchesDomain ||
+      item.tags.some((t) => t.toLowerCase().includes(q)) ||
+      (item.category === "projects" && item.localPort && item.localPort.toString().includes(q))
+    );
+  });
 
   useEffect(() => {
     if (!isOpen) {
@@ -107,7 +113,7 @@ export function CommandPalette({ isOpen, onClose, items }: CommandPaletteProps) 
             type="text"
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
-            placeholder="Search projects, apps, ports or tags..."
+            placeholder="Search projects, domains, ports or tags..."
             className="flex-1 bg-transparent text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none"
           />
           <button
@@ -133,6 +139,8 @@ export function CommandPalette({ isOpen, onClose, items }: CommandPaletteProps) 
                     (item.localPort ? `http://localhost:${item.localPort}` : undefined)
                   : item.url;
 
+              const domainBadge = item.category === "projects" ? item.liveDomain : item.domain;
+
               return (
                 <div
                   key={item.id}
@@ -148,16 +156,27 @@ export function CommandPalette({ isOpen, onClose, items }: CommandPaletteProps) 
                       : "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                   }`}
                 >
-                  <div className="flex flex-col gap-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                        {item.name}
-                      </span>
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300">
-                        {item.category}
-                      </span>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {item.logoUrl ? (
+                      <img
+                        src={item.logoUrl}
+                        alt={`${item.name} logo`}
+                        className="w-5 h-5 object-contain rounded shrink-0"
+                      />
+                    ) : null}
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                          {item.name}
+                        </span>
+                        {domainBadge && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
+                            {domainBadge}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-zinc-500 line-clamp-1">{item.description}</span>
                     </div>
-                    <span className="text-xs text-zinc-500 line-clamp-1">{item.description}</span>
                   </div>
 
                   <div className="flex items-center gap-1.5 text-zinc-400 shrink-0 ml-2">

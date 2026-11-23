@@ -23,8 +23,10 @@ export interface ProjectItem {
   localPort?: number;
   localPath: string;
   liveUrl?: string;
+  liveDomain?: string;
   githubUrl?: string;
   infraUrl?: string;
+  logoUrl?: string;
   isPinned?: boolean;
   tags: string[];
 }
@@ -35,6 +37,8 @@ export interface SaaSAppItem {
   category: Exclude<AppCategory, "all" | "projects">;
   description: string;
   url: string;
+  domain?: string;
+  logoUrl?: string;
   isPinned?: boolean;
   tags: string[];
 }
